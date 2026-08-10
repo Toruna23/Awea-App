@@ -11,6 +11,8 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
   const [newItem, setNewItem] = useState({ category_id: categories[0]?.id || "", name: "", description: "", price: "", image_url: "" });
   const [savingSettings, setSavingSettings] = useState(false);
   const [links, setLinks] = useState({
+    logo_url: restaurant.logo_url || "",
+    cover_image_url: restaurant.cover_image_url || "",
     instagram_url: restaurant.instagram_url || "",
     tiktok_url: restaurant.tiktok_url || "",
     facebook_url: restaurant.facebook_url || "",
@@ -103,6 +105,8 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
       <div className="bg-white border border-line rounded-xl p-4 mb-6">
         <div className="font-display font-semibold mb-3 text-sm">Socials, review link & WiFi</div>
         {[
+          ["logo_url", "Logo image URL"],
+          ["cover_image_url", "Header food photo URL"],
           ["instagram_url", "Instagram URL"],
           ["tiktok_url", "TikTok URL"],
           ["facebook_url", "Facebook URL"],
