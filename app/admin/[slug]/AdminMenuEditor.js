@@ -10,6 +10,22 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
   const [newCatName, setNewCatName] = useState("");
   const [newItem, setNewItem] = useState({ category_id: categories[0]?.id || "", name: "", description: "", price: "", image_url: "" });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [links, setLinks] = useState({
+    instagram_url: restaurant.instagram_url || "",
+    tiktok_url: restaurant.tiktok_url || "",
+    facebook_url: restaurant.facebook_url || "",
+    google_review_url: restaurant.google_review_url || "",
+    wifi_ssid: restaurant.wifi_ssid || "",
+    wifi_password: restaurant.wifi_password || "",
+  });
+  const [savingLinks, setSavingLinks] = useState(false);
+
+  async function saveLinks() {
+    setSavingLinks(true);
+    await supabase.from("restaurants").update(links).eq("id", restaurant.id);
+    setSavingLinks(false);
+    router.refresh();
+  }
 
   async function addCategory() {
     if (!newCatName.trim()) return;
@@ -51,6 +67,7 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
 
   return (
     <div className="mt-6">
+      {/* Tier / rewards controls */}
       <div className="bg-white border border-line rounded-xl p-4 mb-6">
         <div className="font-display font-semibold mb-3 text-sm">Plan settings</div>
         <div className="flex gap-6 text-xs">
@@ -82,6 +99,31 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
         {savingSettings && <div className="text-muted text-xs mt-2">Saving...</div>}
       </div>
 
+      {/* Socials, Google review, WiFi */}
+      <div className="bg-white border border-line rounded-xl p-4 mb-6">
+        <div className="font-display font-semibold mb-3 text-sm">Socials, review link & WiFi</div>
+        {[
+          ["instagram_url", "Instagram URL"],
+          ["tiktok_url", "TikTok URL"],
+          ["facebook_url", "Facebook URL"],
+          ["google_review_url", "Google review link"],
+          ["wifi_ssid", "WiFi network name"],
+          ["wifi_password", "WiFi password"],
+        ].map(([field, label]) => (
+          <input
+            key={field}
+            placeholder={label}
+            value={links[field]}
+            onChange={(e) => setLinks({ ...links, [field]: e.target.value })}
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
+          />
+        ))}
+        <button onClick={saveLinks} className="w-full bg-amber text-white rounded-lg py-2 text-sm font-bold">
+          {savingLinks ? "Saving..." : "Save"}
+        </button>
+      </div>
+
+      {/* Categories */}
       <div className="font-display font-semibold mb-2">Categories</div>
       <div className="flex flex-wrap gap-2 mb-3">
         {categories.map((c) => (
@@ -96,6 +138,7 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
         <button onClick={addCategory} className="bg-amber text-white rounded-lg px-3 text-sm font-bold">Add</button>
       </div>
 
+      {/* Items */}
       <div className="font-display font-semibold mb-2">Menu items</div>
       <div className="flex flex-col gap-2 mb-4">
         {items.map((item) => (
