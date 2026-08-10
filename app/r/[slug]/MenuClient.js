@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 function genCode(prefix) {
@@ -29,6 +29,15 @@ export default function MenuClient({ restaurant, categories, items }) {
     { key: "facebook", url: restaurant.facebook_url },
     { key: "google", url: restaurant.google_review_url },
   ].filter((s) => s.url);
+
+  const itemsInCat = items.filter((i) => i.category_id === cat);
+  const activeIndex = activeItem ? itemsInCat.findIndex((i) => i.id === activeItem.id) : -1;
+
+  function goToOffset(offset) {
+    if (activeIndex === -1 || itemsInCat.length < 2) return;
+    const next = (activeIndex + offset + itemsInCat.length) % itemsInCat.length;
+    setActiveItem(itemsInCat[next]);
+  }
 
   async function handleJoin(formData) {
     setSubmitting(true);
@@ -86,28 +95,41 @@ export default function MenuClient({ restaurant, categories, items }) {
       `}</style>
 
       <div className="w-full max-w-md bg-white rounded-3xl border border-line shadow-xl overflow-hidden">
-        {/* Header */}
-        <div className="px-5 pt-6 pb-4 border-b border-line">
-          <div className="font-display text-3xl font-black text-amber">{restaurant.name}</div>
-          {restaurant.slogan && (
-            <div className="font-display italic text-sm mt-1">{restaurant.slogan}</div>
+        {/* Hero header: food photo with logo/name centered on top */}
+        <div className="relative w-full h-52 bg-line">
+          {restaurant.cover_image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={restaurant.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
           )}
-          {restaurant.address && (
-            <div className="text-muted text-xs mt-1.5">{restaurant.address}</div>
-          )}
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.1) 55%, rgba(0,0,0,0.35))" }} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+            {restaurant.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={restaurant.logo_url} alt={restaurant.name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow mb-2" />
+            )}
+            <div className="font-display text-3xl font-black text-white" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
+              {restaurant.name}
+            </div>
+            {restaurant.slogan && (
+              <div className="font-display italic text-sm text-white/90 mt-1">{restaurant.slogan}</div>
+            )}
+          </div>
         </div>
 
-        {hasWifi && !wifiUnlocked && (
-          <button
-            onClick={() => setWifiModalOpen(true)}
-            className="flex items-center justify-between w-[calc(100%-32px)] mx-4 mt-3.5 bg-amber/10 border border-amber rounded-xl px-3 py-2.5 text-left text-sm"
-          >
-            <span>Get the WiFi code</span>
-            <span className="text-amber text-xs font-bold">Tap to unlock</span>
-          </button>
-        )}
+        {/* Address (left) + WiFi button (right) */}
+        <div className="flex items-center justify-between px-5 pt-4">
+          <div className="text-muted text-xs">{restaurant.address}</div>
+          {hasWifi && (
+            <button
+              onClick={() => !wifiUnlocked && setWifiModalOpen(true)}
+              className="text-amber text-xs font-bold border border-amber rounded-full px-3 py-1.5 whitespace-nowrap"
+            >
+              {wifiUnlocked ? "WiFi unlocked" : "WiFi"}
+            </button>
+          )}
+        </div>
         {wifiUnlocked && (
-          <div className="mx-4 mt-3.5 bg-amber/10 border border-amber rounded-xl px-3 py-2.5 text-sm">
+          <div className="mx-5 mt-2 bg-amber/10 border border-amber rounded-xl px-3 py-2.5 text-sm">
             <div><b>{restaurant.wifi_ssid}</b></div>
             <div className="text-muted text-xs mt-0.5">Password: <span className="font-mono">{restaurant.wifi_password}</span></div>
           </div>
@@ -116,18 +138,18 @@ export default function MenuClient({ restaurant, categories, items }) {
         {rewards === "trial" && !joined && (
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 w-[calc(100%-32px)] mx-4 mt-3 bg-sage/10 border border-sage rounded-xl px-3 py-2.5 text-left text-sm"
+            className="flex items-center gap-2 w-[calc(100%-40px)] mx-5 mt-3 bg-sage/10 border border-sage rounded-xl px-3 py-2.5 text-left text-sm"
           >
-            <span>Join {restaurant.name} Rewards — get 10% off today&apos;s bill</span>
+            <span>Join {restaurant.name} Rewards for 10% off today&apos;s bill</span>
           </button>
         )}
         {rewards === "trial" && joined && (
-          <div className="mx-4 mt-3 bg-sage/10 border border-sage rounded-xl px-3 py-2.5 text-sm">
+          <div className="mx-5 mt-3 bg-sage/10 border border-sage rounded-xl px-3 py-2.5 text-sm">
             You&apos;re in — your code is <b>{code}</b>
           </div>
         )}
         {rewards === "locked" && (
-          <div className="mx-4 mt-3 bg-line/40 border border-dashed border-line rounded-xl px-3 py-2.5 text-muted text-xs">
+          <div className="mx-5 mt-3 bg-line/40 border border-dashed border-line rounded-xl px-3 py-2.5 text-muted text-xs">
             Rewards program paused for now — ask your host
           </div>
         )}
@@ -155,42 +177,40 @@ export default function MenuClient({ restaurant, categories, items }) {
 
         {/* Items */}
         <div className="px-4 pt-3 pb-6 flex flex-col gap-3">
-          {items
-            .filter((i) => i.category_id === cat)
-            .map((item, idx) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveItem(item)}
-                style={{ animationDelay: `${idx * 60}ms` }}
-                className="rise-item flex gap-3 bg-white border border-line rounded-xl p-3 shadow-sm text-left active:scale-[0.98] transition-transform"
-              >
-                <div className="w-14 h-14 rounded-lg bg-line/40 overflow-hidden flex-shrink-0">
-                  {item.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                  )}
+          {itemsInCat.map((item, idx) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveItem(item)}
+              style={{ animationDelay: `${idx * 60}ms` }}
+              className="rise-item flex gap-3 bg-white border border-line rounded-xl p-3 shadow-sm text-left active:scale-[0.98] transition-transform"
+            >
+              <div className="w-14 h-14 rounded-lg bg-line/40 overflow-hidden flex-shrink-0">
+                {item.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between gap-2">
+                  <div className="font-display font-semibold text-sm">{item.name}</div>
+                  <div className="text-amber font-bold text-sm whitespace-nowrap">R{item.price}</div>
                 </div>
-                <div className="flex-1">
-                  <div className="flex justify-between gap-2">
-                    <div className="font-display font-semibold text-sm">{item.name}</div>
-                    <div className="text-amber font-bold text-sm whitespace-nowrap">R{item.price}</div>
-                  </div>
-                  {item.description && (
-                    <div className="text-muted text-xs mt-0.5">{item.description}</div>
-                  )}
-                </div>
-              </button>
-            ))}
-          {items.filter((i) => i.category_id === cat).length === 0 && (
+                {item.description && (
+                  <div className="text-muted text-xs mt-0.5">{item.description}</div>
+                )}
+              </div>
+            </button>
+          ))}
+          {itemsInCat.length === 0 && (
             <div className="text-muted text-sm text-center py-8">No items in this category yet.</div>
           )}
         </div>
 
-        {/* Social bar */}
+        {/* Social + Google review bar, same color as the price */}
         {socials.length > 0 && (
           <div className="flex justify-center gap-5 border-t border-line py-4">
             {socials.map((s) => (
-              <a key={s.key} href={s.url} target="_blank" rel="noreferrer" style={{ color: "#5C5346" }}>
+              <a key={s.key} href={s.url} target="_blank" rel="noreferrer" className="text-amber">
                 <SocialIcon type={s.key} />
               </a>
             ))}
@@ -218,29 +238,57 @@ export default function MenuClient({ restaurant, categories, items }) {
         />
       )}
 
-      {activeItem && <ItemModal item={activeItem} onClose={() => setActiveItem(null)} />}
+      {activeItem && (
+        <ItemModal
+          item={activeItem}
+          onClose={() => setActiveItem(null)}
+          onPrev={() => goToOffset(-1)}
+          onNext={() => goToOffset(1)}
+          canNavigate={itemsInCat.length > 1}
+        />
+      )}
     </main>
   );
 }
 
-function ItemModal({ item, onClose }) {
+function ItemModal({ item, onClose, onPrev, onNext, canNavigate }) {
+  const touchStartX = useRef(null);
+
+  function handleTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e) {
+    if (touchStartX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (!canNavigate || Math.abs(deltaX) < 40) return;
+    if (deltaX < 0) onNext();
+    else onPrev();
+  }
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4" onClick={onClose}>
       <div
         className="w-full max-w-sm bg-white rounded-2xl overflow-hidden text-center"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{ animation: "riseIn 0.25s ease both" }}
       >
         <div className="w-full aspect-square bg-line/40">
           {item.image_url && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" draggable={false} />
           )}
         </div>
         <div className="p-5">
           <div className="font-display text-xl font-bold">{item.name}</div>
           {item.description && <div className="text-muted text-sm mt-2">{item.description}</div>}
           <div className="text-amber font-bold text-lg mt-3">R{item.price}</div>
+          {canNavigate && (
+            <div className="text-muted text-xs mt-3">Swipe left or right for more</div>
+          )}
           <button onClick={onClose} className="mt-4 text-muted text-xs border border-line rounded-lg px-4 py-2">Close</button>
         </div>
       </div>
