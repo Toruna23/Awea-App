@@ -80,9 +80,9 @@ export default function MenuClient({ restaurant, categories, items }) {
     <main className="min-h-screen flex justify-center py-6 px-3">
       <style>{`
         @keyframes riseIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
         .rise-item { animation: riseIn 0.4s ease both; }
-        .float-icon { display: inline-block; animation: floaty 2.4s ease-in-out infinite; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
 
       <div className="w-full max-w-md bg-white rounded-3xl border border-line shadow-xl overflow-hidden">
@@ -97,17 +97,17 @@ export default function MenuClient({ restaurant, categories, items }) {
           )}
         </div>
 
-        {hasWifi && (
+        {hasWifi && !wifiUnlocked && (
           <button
-            onClick={() => !wifiUnlocked && setWifiModalOpen(true)}
+            onClick={() => setWifiModalOpen(true)}
             className="flex items-center justify-between w-[calc(100%-32px)] mx-4 mt-3.5 bg-amber/10 border border-amber rounded-xl px-3 py-2.5 text-left text-sm"
           >
-            <span><span className="float-icon">📶</span> {wifiUnlocked ? "WiFi unlocked" : "Get the WiFi code"}</span>
-            {!wifiUnlocked && <span className="text-amber text-xs font-bold">Tap to unlock</span>}
+            <span>Get the WiFi code</span>
+            <span className="text-amber text-xs font-bold">Tap to unlock</span>
           </button>
         )}
         {wifiUnlocked && (
-          <div className="mx-4 mt-2 bg-amber/10 border border-amber rounded-xl px-3 py-2.5 text-sm">
+          <div className="mx-4 mt-3.5 bg-amber/10 border border-amber rounded-xl px-3 py-2.5 text-sm">
             <div><b>{restaurant.wifi_ssid}</b></div>
             <div className="text-muted text-xs mt-0.5">Password: <span className="font-mono">{restaurant.wifi_password}</span></div>
           </div>
@@ -118,23 +118,22 @@ export default function MenuClient({ restaurant, categories, items }) {
             onClick={() => setModalOpen(true)}
             className="flex items-center gap-2 w-[calc(100%-32px)] mx-4 mt-3 bg-sage/10 border border-sage rounded-xl px-3 py-2.5 text-left text-sm"
           >
-            <span className="float-icon">🎁</span>
             <span>Join {restaurant.name} Rewards — get 10% off today&apos;s bill</span>
           </button>
         )}
         {rewards === "trial" && joined && (
           <div className="mx-4 mt-3 bg-sage/10 border border-sage rounded-xl px-3 py-2.5 text-sm">
-            ✓ You&apos;re in — your code is <b>{code}</b>
+            You&apos;re in — your code is <b>{code}</b>
           </div>
         )}
         {rewards === "locked" && (
           <div className="mx-4 mt-3 bg-line/40 border border-dashed border-line rounded-xl px-3 py-2.5 text-muted text-xs">
-            🔒 Rewards program paused for now — ask your host
+            Rewards program paused for now — ask your host
           </div>
         )}
 
         {/* Categories */}
-        <div className="flex gap-2 px-4 pt-4 overflow-x-auto">
+        <div className="hide-scrollbar flex gap-2 px-4 pt-4 overflow-x-auto">
           {categories.map((c) => (
             <button
               key={c.id}
@@ -191,7 +190,7 @@ export default function MenuClient({ restaurant, categories, items }) {
         {socials.length > 0 && (
           <div className="flex justify-center gap-5 border-t border-line py-4">
             {socials.map((s) => (
-              <a key={s.key} href={s.url} target="_blank" rel="noreferrer" className="text-cream">
+              <a key={s.key} href={s.url} target="_blank" rel="noreferrer" style={{ color: "#5C5346" }}>
                 <SocialIcon type={s.key} />
               </a>
             ))}
@@ -249,7 +248,7 @@ function ItemModal({ item, onClose }) {
   );
 }
 
-function JoinModal({ onClose, joinRewards, restaurantName, onSubmit, submitting, error }) {
+function JoinModal({ onClose, restaurantName, onSubmit, submitting, error }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
