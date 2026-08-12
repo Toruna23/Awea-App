@@ -16,6 +16,14 @@ export default async function AdminRestaurantPage({ params }) {
 
   if (!restaurant) return notFound();
 
+  const { data: paymentSettings } = await supabase
+    .from("restaurant_payment_settings")
+    .select("*")
+    .eq("restaurant_id", restaurant.id)
+    .single();
+
+  const restaurantWithPayment = { ...restaurant, ...paymentSettings };
+
   const { data: categories } = await supabase
     .from("menu_categories")
     .select("*")
@@ -43,7 +51,7 @@ export default async function AdminRestaurantPage({ params }) {
         View live menu → /r/{restaurant.slug}
       </a>
 
-      <AdminMenuEditor restaurant={restaurant} categories={categories || []} items={items || []} />
+      <AdminMenuEditor restaurant={restaurantWithPayment} categories={categories || []} items={items || []} />
 
       <div className="mt-10">
         <div className="font-display font-semibold mb-2">Rewards signups ({signups?.length ?? 0} shown, most recent 20)</div>
