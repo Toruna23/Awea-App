@@ -198,7 +198,7 @@ export default function MenuClient({ restaurant, categories, items }) {
           {itemsInCat.map((item, idx) => (
             <div
               key={item.id}
-              style={{ animationDelay: `${idx * 60}ms` }}
+style={{ animationDelay: `${idx * 60}ms` }}
               className="rise-item flex gap-3 bg-white border border-line rounded-xl p-3 shadow-sm"
             >
               <button onClick={() => setActiveItem(item)} className="flex gap-3 flex-1 text-left">
@@ -395,9 +395,33 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose }) {
   const formRef = useRef(null);
   const [ozowFields, setOzowFields] = useState(null);
   const [ozowPostUrl, setOzowPostUrl] = useState(null);
+  const [rewardCode, setRewardCode] = useState("");
+  const [rewardStatus, setRewardStatus] = useState(null);
+  const [discountPct, setDiscountPct] = useState(0);
 
   const tipAmount = customTip !== "" ? Number(customTip) : Math.round(cartTotal * (tipPct / 100) * 100) / 100;
-  const total = Math.round((cartTotal + tipAmount) * 100) / 100;
+  const discountAmount = rewardStatus === "valid" ? Math.round(cartTotal * (discountPct / 100) * 100) / 100 : 0;
+  const total = Math.round((cartTotal - discountAmount + tipAmount) * 100) / 100;
+
+  async function handleApplyReward() {
+    if (!rewardCode.trim()) return;
+    setRewardStatus("checking");
+    try {
+      const res = await fetch("/api/apply-reward", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restaurant_id: restaurant.id, code: rewardCode }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setRewardStatus("valid");
+        setDiscountPct(data.discount_pct);
+      } else {
+        setRewardStatus("invalid");}
+    } catch {
+      setRewardStatus("invalid");
+    }
+  }
 
   async function handlePay() {
     setLoading(true);
@@ -418,6 +442,7 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose }) {
           customer_name: name,
           customer_phone: phone,
           origin: window.location.origin,
+          reward_code: rewardStatus === "valid" ? rewardCode.trim() : null,
         }),
       });
       const data = await res.json();
@@ -459,6 +484,38 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose }) {
           <span className="text-muted">Subtotal</span>
           <span>R{cartTotal.toFixed(2)}</span>
         </div>
+
+        <div className="mt-4">
+          <div className="text-muted text-xs mb-2">Have a rewards code?</div>
+          <div className="flex gap-2">
+            <input
+              placeholder="Reward code"
+              value={rewardCode}
+              onChange={(e) => { setRewardCode(e.target.value); setRewardStatus(null); }}
+              className="flex-1 border border-line rounded-lg px-3 py-2 text-sm"
+            />
+            <button
+              onClick={handleApplyReward}
+              disabled={rewardStatus === "checking"}
+              className="bg-sage text-white rounded-lg px-4 text-sm font-bold"
+            >
+              {rewardStatus === "checking" ? "..." : "Apply"}
+            </button>
+          </div>
+          {rewardStatus === "valid" && (
+            <div className="text-sage text-xs mt-1.5">Code applied — {discountPct}% off</div>
+          )}
+          {rewardStatus === "invalid" && (
+            <div className="text-rust text-xs mt-1.5">That code isn&apos;t valid for this restaurant</div>
+          )}
+        </div>
+
+        {discountAmount > 0 && (
+          <div className="text-sm flex justify-between mt-3">
+            <span className="text-muted">Discount</span>
+            <span className="text-sage">−R{discountAmount.toFixed(2)}</span>
+          </div>
+        )}
 
         <div className="mt-4">
           <div className="text-muted text-xs mb-2">Add a tip for your waiter</div>
