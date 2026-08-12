@@ -11,14 +11,14 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
   const [newItem, setNewItem] = useState({ category_id: categories[0]?.id || "", name: "", description: "", price: "", image_url: "" });
   const [savingSettings, setSavingSettings] = useState(false);
   const [links, setLinks] = useState({
-    logo_url: restaurant.logo_url || "",
-    cover_image_url: restaurant.cover_image_url || "",
     instagram_url: restaurant.instagram_url || "",
     tiktok_url: restaurant.tiktok_url || "",
     facebook_url: restaurant.facebook_url || "",
     google_review_url: restaurant.google_review_url || "",
     wifi_ssid: restaurant.wifi_ssid || "",
     wifi_password: restaurant.wifi_password || "",
+    logo_url: restaurant.logo_url || "",
+    cover_image_url: restaurant.cover_image_url || "",
   });
   const [savingLinks, setSavingLinks] = useState(false);
 
@@ -26,6 +26,24 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
     setSavingLinks(true);
     await supabase.from("restaurants").update(links).eq("id", restaurant.id);
     setSavingLinks(false);
+    router.refresh();
+  }
+
+  const [ozow, setOzow] = useState({
+    ozow_site_code: restaurant.ozow_site_code || "",
+    ozow_private_key: restaurant.ozow_private_key || "",
+    ozow_api_key: restaurant.ozow_api_key || "",
+    is_test: restaurant.is_test !== false,
+  });
+  const [savingOzow, setSavingOzow] = useState(false);
+
+  async function saveOzow() {
+    setSavingOzow(true);
+    await supabase.from("restaurant_payment_settings").upsert({
+      restaurant_id: restaurant.id,
+      ...ozow,
+    });
+    setSavingOzow(false);
     router.refresh();
   }
 
@@ -124,6 +142,43 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
         ))}
         <button onClick={saveLinks} className="w-full bg-amber text-white rounded-lg py-2 text-sm font-bold">
           {savingLinks ? "Saving..." : "Save"}
+        </button>
+      </div>
+
+      {/* Ozow payment settings */}
+      <div className="bg-white border border-line rounded-xl p-4 mb-6">
+        <div className="font-display font-semibold mb-3 text-sm">Ozow payment settings</div>
+        <div className="text-muted text-xs mb-3">
+          This restaurant&apos;s own Ozow credentials — payments go straight to their account.
+        </div>
+        <input
+          placeholder="Ozow Site Code"
+          value={ozow.ozow_site_code}
+          onChange={(e) => setOzow({ ...ozow, ozow_site_code: e.target.value })}
+          className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
+        />
+        <input
+          placeholder="Ozow Private Key"
+          value={ozow.ozow_private_key}
+          onChange={(e) => setOzow({ ...ozow, ozow_private_key: e.target.value })}
+          className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
+        />
+        <input
+          placeholder="Ozow API Key"
+          value={ozow.ozow_api_key}
+          onChange={(e) => setOzow({ ...ozow, ozow_api_key: e.target.value })}
+          className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
+        />
+        <label className="flex items-center gap-2 text-xs text-muted mb-3">
+          <input
+            type="checkbox"
+            checked={ozow.is_test}
+            onChange={(e) => setOzow({ ...ozow, is_test: e.target.checked })}
+          />
+          Test mode (no real charges)
+        </label>
+        <button onClick={saveOzow} className="w-full bg-amber text-white rounded-lg py-2 text-sm font-bold">
+          {savingOzow ? "Saving..." : "Save"}
         </button>
       </div>
 
