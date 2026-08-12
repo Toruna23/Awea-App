@@ -262,7 +262,16 @@ export default function MenuClient({ restaurant, categories, items }) {
       )}
 
       {activeItem && (
-        <ItemModal item={activeItem} onClose={() => setActiveItem(null)} onPrev={() => goToOffset(-1)} onNext={() => goToOffset(1)} canNavigate={itemsInCat.length > 1} />
+        <ItemModal
+          item={activeItem}
+          onClose={() => setActiveItem(null)}
+          onPrev={() => goToOffset(-1)}
+          onNext={() => goToOffset(1)}
+          canNavigate={itemsInCat.length > 1}
+          canOrder={canOrder}
+          qty={cart[activeItem.id] || 0}
+          onAdjust={(delta) => adjustCart(activeItem.id, delta)}
+        />
       )}
 
       {checkoutOpen && (
@@ -278,7 +287,7 @@ export default function MenuClient({ restaurant, categories, items }) {
   );
 }
 
-function ItemModal({ item, onClose, onPrev, onNext, canNavigate }) {
+function ItemModal({ item, onClose, onPrev, onNext, canNavigate, canOrder, qty, onAdjust }) {
   const touchStartX = useRef(null);
   function handleTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
   function handleTouchEnd(e) {
@@ -301,6 +310,13 @@ function ItemModal({ item, onClose, onPrev, onNext, canNavigate }) {
           <div className="font-display text-xl font-bold">{item.name}</div>
           {item.description && <div className="text-muted text-sm mt-2">{item.description}</div>}
           <div className="text-amber font-bold text-lg mt-3">R{item.price}</div>
+          {canOrder && (
+            <div className="flex items-center justify-center gap-4 mt-4">
+              <button onClick={() => onAdjust(-1)} className="w-9 h-9 rounded-lg border border-line text-lg">−</button>
+              <span className="text-base font-semibold w-6 text-center">{qty}</span>
+              <button onClick={() => onAdjust(1)} className="w-9 h-9 rounded-lg border border-line text-lg">+</button>
+            </div>
+          )}
           {canNavigate && <div className="text-muted text-xs mt-3">Swipe left or right for more</div>}
           <button onClick={onClose} className="mt-4 text-muted text-xs border border-line rounded-lg px-4 py-2">Close</button>
         </div>
