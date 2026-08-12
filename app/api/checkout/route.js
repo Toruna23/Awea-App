@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 
 export async function POST(request) {
   const body = await request.json();
-  const { restaurant_id, items, tip, customer_name, customer_phone, origin } = body;
+  const { restaurant_id, items, tip, customer_name, customer_phone, origin, reward_code } = body;
 
   if (!restaurant_id || !items || !Array.isArray(items) || items.length === 0) {
     return Response.json({ error: "Missing order details." }, { status: 400 });
@@ -11,7 +11,6 @@ export async function POST(request) {
 
   const supabase = createAdminClient();
 
-  // Look up this restaurant's own Ozow credentials (private table, service role only)
   const { data: paymentSettings } = await supabase
     .from("restaurant_payment_settings")
     .select("*")
@@ -26,8 +25,25 @@ export async function POST(request) {
   }
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+  let discount = 0;
+  let verifiedRewardCode = null;
+  if (reward_code) {
+    const { data: signup } = await supabase
+      .from("rewards_signups")
+      .select("id")
+      .eq("restaurant_id", restaurant_id)
+      .ilike("reward_code", reward_code.trim())
+      .maybeSingle();
+
+    if (signup) {
+      discount = Math.round(subtotal * 0.10 * 100) / 100;
+      verifiedRewardCode = reward_code.trim();
+    }
+  }
+
   const tipAmount = Number(tip) || 0;
-  const total = Math.round((subtotal + tipAmount) * 100) / 100;
+  const total = Math.round((subtotal - discount + tipAmount) * 100) / 100;
   const transactionReference = `AWEA-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const { error: insertError } = await supabase.from("orders").insert({
@@ -35,6 +51,8 @@ export async function POST(request) {
     items,
     subtotal,
     tip: tipAmount,
+    discount,
+    reward_code: verifiedRewardCode,
     total,
     transaction_reference: transactionReference,
     customer_name: customer_name || null,
@@ -56,15 +74,14 @@ export async function POST(request) {
   const cancelUrl = `${origin}/order/${transactionReference}?status=cancelled`;
   const errorUrl = `${origin}/order/${transactionReference}?status=error`;
 
-  // Ozow requires these fields concatenated in this exact order, lowercased, hashed with SHA512
   const hashString = [
     siteCode,
     countryCode,
     currencyCode,
     amount,
     transactionReference,
-    "", // bankReference (optional, left blank)
-    "", // optional1-5
+    "",
+    "",
     "",
     "",
     "",
