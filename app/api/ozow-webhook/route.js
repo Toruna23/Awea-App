@@ -23,7 +23,6 @@ export async function POST(request) {
     .eq("restaurant_id", order.restaurant_id)
     .single();
 
-  // Verify this notification genuinely came from Ozow using their shared private key
   const hashString = [
     data.SiteCode,
     data.TransactionId,
@@ -45,6 +44,22 @@ export async function POST(request) {
     .from("orders")
     .update({ status: newStatus, ozow_transaction_id: data.TransactionId })
     .eq("transaction_reference", data.TransactionReference);
+
+  if (newStatus === "complete" && order.reward_code) {
+    const { data: signup } = await supabase
+      .from("rewards_signups")
+      .select("id, redeemed_count")
+      .eq("restaurant_id", order.restaurant_id)
+      .ilike("reward_code", order.reward_code)
+      .maybeSingle();
+
+    if (signup) {
+      await supabase
+        .from("rewards_signups")
+        .update({ redeemed_count: (signup.redeemed_count || 0) + 1 })
+        .eq("id", signup.id);
+    }
+  }
 
   return new Response("OK", { status: 200 });
 }
