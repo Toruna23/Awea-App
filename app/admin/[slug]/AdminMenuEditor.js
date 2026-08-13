@@ -29,22 +29,37 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
     router.refresh();
   }
 
-  const [ozow, setOzow] = useState({
-    ozow_site_code: restaurant.ozow_site_code || "",
-    ozow_private_key: restaurant.ozow_private_key || "",
-    ozow_api_key: restaurant.ozow_api_key || "",
-    is_test: restaurant.is_test !== false,
+  const [paystack, setPaystack] = useState({
+    business_name: restaurant.name || "",
+    settlement_bank: "",
+    account_number: "",
+    percentage_charge: 0,
   });
-  const [savingOzow, setSavingOzow] = useState(false);
+  const [savingPaystack, setSavingPaystack] = useState(false);
+  const [paystackError, setPaystackError] = useState("");
+  const [paystackSuccess, setPaystackSuccess] = useState(restaurant.paystack_subaccount_code ? true : false);
 
-  async function saveOzow() {
-    setSavingOzow(true);
-    await supabase.from("restaurant_payment_settings").upsert({
-      restaurant_id: restaurant.id,
-      ...ozow,
-    });
-    setSavingOzow(false);
-    router.refresh();
+  async function savePaystack() {
+    setSavingPaystack(true);
+    setPaystackError("");
+    try {
+      const res = await fetch("/api/admin/create-subaccount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restaurant_id: restaurant.id, ...paystack }),
+      });
+      const data = await res.json();
+      setSavingPaystack(false);
+      if (!res.ok) {
+        setPaystackError(data.error || "Something went wrong.");
+        return;
+      }
+      setPaystackSuccess(true);
+      router.refresh();
+    } catch {
+      setSavingPaystack(false);
+      setPaystackError("Something went wrong — please try again.");
+    }
   }
 
   async function addCategory() {
@@ -145,40 +160,43 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
         </button>
       </div>
 
-      {/* Ozow payment settings */}
+      {/* Paystack payment settings */}
       <div className="bg-white border border-line rounded-xl p-4 mb-6">
-        <div className="font-display font-semibold mb-3 text-sm">Ozow payment settings</div>
+        <div className="font-display font-semibold mb-3 text-sm">Paystack payment settings</div>
         <div className="text-muted text-xs mb-3">
-          This restaurant&apos;s own Ozow credentials — payments go straight to their account.
+          Enter this restaurant&apos;s own bank details — Paystack settles their share directly, it never touches your balance.
         </div>
+        {paystackSuccess && (
+          <div className="text-sage text-xs mb-3">✓ Payments are set up for this restaurant.</div>
+        )}
         <input
-          placeholder="Ozow Site Code"
-          value={ozow.ozow_site_code}
-          onChange={(e) => setOzow({ ...ozow, ozow_site_code: e.target.value })}
+          placeholder="Business name"
+          value={paystack.business_name}
+          onChange={(e) => setPaystack({ ...paystack, business_name: e.target.value })}
           className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
         />
         <input
-          placeholder="Ozow Private Key"
-          value={ozow.ozow_private_key}
-          onChange={(e) => setOzow({ ...ozow, ozow_private_key: e.target.value })}
+          placeholder="Settlement bank code (e.g. 632005 for FNB)"
+          value={paystack.settlement_bank}
+          onChange={(e) => setPaystack({ ...paystack, settlement_bank: e.target.value })}
           className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
         />
         <input
-          placeholder="Ozow API Key"
-          value={ozow.ozow_api_key}
-          onChange={(e) => setOzow({ ...ozow, ozow_api_key: e.target.value })}
+          placeholder="Bank account number"
+          value={paystack.account_number}
+          onChange={(e) => setPaystack({ ...paystack, account_number: e.target.value })}
           className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
         />
-        <label className="flex items-center gap-2 text-xs text-muted mb-3">
-          <input
-            type="checkbox"
-            checked={ozow.is_test}
-            onChange={(e) => setOzow({ ...ozow, is_test: e.target.checked })}
-          />
-          Test mode (no real charges)
-        </label>
-        <button onClick={saveOzow} className="w-full bg-amber text-white rounded-lg py-2 text-sm font-bold">
-          {savingOzow ? "Saving..." : "Save"}
+        <input
+          placeholder="Awea's cut % (0 = restaurant gets 100%)"
+          type="number"
+          value={paystack.percentage_charge}
+          onChange={(e) => setPaystack({ ...paystack, percentage_charge: e.target.value })}
+          className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
+        />
+        {paystackError && <div className="text-rust text-xs mb-2">{paystackError}</div>}
+        <button onClick={savePaystack} disabled={savingPaystack} className="w-full bg-amber text-white rounded-lg py-2 text-sm font-bold">
+          {savingPaystack ? "Setting up..." : "Save payment details"}
         </button>
       </div>
 
