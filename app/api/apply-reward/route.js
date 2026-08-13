@@ -12,7 +12,7 @@ export async function POST(request) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("rewards_signups")
-    .select("id")
+    .select("id, visit_count")
     .eq("restaurant_id", restaurant_id)
     .ilike("reward_code", code.trim())
     .maybeSingle();
@@ -21,5 +21,5 @@ export async function POST(request) {
     return Response.json({ valid: false });
   }
 
-  return Response.json({ valid: true, discount_pct: REWARD_DISCOUNT_PCT });
+  return Response.json({ valid: true, discount_pct: REWARD_DISCOUNT_PCT, visit_count: data.visit_count || 1 });
 }
