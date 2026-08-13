@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 function genCode(prefix) {
@@ -23,6 +23,8 @@ export default function MenuClient({ restaurant, categories, items }) {
   const [wifiError, setWifiError] = useState("");
   const [cart, setCart] = useState({});
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [returningMember, setReturningMember] = useState(null);
+  const [loggingVisit, setLoggingVisit] = useState(false);
 
   const trialActive = restaurant.trial_ends_at && new Date(restaurant.trial_ends_at) > new Date();
   const canOrder = restaurant.tier === "pro" || trialActive;
@@ -57,6 +59,42 @@ export default function MenuClient({ restaurant, categories, items }) {
     setActiveItem(itemsInCat[next]);
   }
 
+  useEffect(() => {
+    const storedCode = window.localStorage.getItem(`awea_reward_${restaurant.slug}`);
+    if (!storedCode) return;
+    fetch("/api/apply-reward", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restaurant_id: restaurant.id, code: storedCode }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.valid) {
+          setReturningMember({ code: storedCode, visitCount: data.visit_count });
+        } else {
+          window.localStorage.removeItem(`awea_reward_${restaurant.slug}`);
+        }
+      })
+      .catch(() => {});
+  }, [restaurant.id, restaurant.slug]);
+
+  async function handleLogVisit() {
+    if (!returningMember) return;
+    setLoggingVisit(true);
+    try {
+      const res = await fetch("/api/log-visit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restaurant_id: restaurant.id, code: returningMember.code }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReturningMember({ ...returningMember, visitCount: data.visit_count });
+      }
+    } catch {}
+    setLoggingVisit(false);
+  }
+
   async function handleJoin(formData) {
     setSubmitting(true);
     setError("");
@@ -80,6 +118,8 @@ export default function MenuClient({ restaurant, categories, items }) {
     setCode(rewardCode);
     setJoined(true);
     setModalOpen(false);
+    window.localStorage.setItem(`awea_reward_${restaurant.slug}`, rewardCode);
+    setReturningMember({ code: rewardCode, visitCount: 1 });
   }
 
   async function handleWifiUnlock(formData) {
@@ -153,7 +193,7 @@ export default function MenuClient({ restaurant, categories, items }) {
           </div>
         )}
 
-        {rewards === "trial" && !joined && (
+        {rewards === "trial" && !joined && !returningMember && (
           <button
             onClick={() => setModalOpen(true)}
             className="flex items-center gap-2 w-[calc(100%-40px)] mx-5 mt-3 bg-sage/10 border border-sage rounded-xl px-3 py-2.5 text-left text-sm"
@@ -166,7 +206,18 @@ export default function MenuClient({ restaurant, categories, items }) {
             You&apos;re in — your code is <b>{code}</b>
           </div>
         )}
-        {rewards === "locked" && (
+        {rewards === "trial" && !joined && returningMember && (
+          <div className="mx-5 mt-3 bg-sage/10 border border-sage rounded-xl px-3 py-2.5 text-sm flex items-center justify-between gap-2">
+            <span>Welcome back — visit #{returningMember.visitCount}</span>
+            <button
+              onClick={handleLogVisit}
+              disabled={loggingVisit}
+              className="text-sage text-xs font-bold border border-sage rounded-full px-3 py-1 whitespace-nowrap"
+            >
+              {loggingVisit ? "..." : "Log this visit"}
+            </button>
+          </div>
+        )}{rewards === "locked" && (
           <div className="mx-5 mt-3 bg-line/40 border border-dashed border-line rounded-xl px-3 py-2.5 text-muted text-xs">
             Rewards program paused for now — ask your host
           </div>
@@ -198,7 +249,7 @@ export default function MenuClient({ restaurant, categories, items }) {
           {itemsInCat.map((item, idx) => (
             <div
               key={item.id}
-style={{ animationDelay: `${idx * 60}ms` }}
+              style={{ animationDelay: `${idx * 60}ms` }}
               className="rise-item flex gap-3 bg-white border border-line rounded-xl p-3 shadow-sm"
             >
               <button onClick={() => setActiveItem(item)} className="flex gap-3 flex-1 text-left">
@@ -281,6 +332,7 @@ style={{ animationDelay: `${idx * 60}ms` }}
           items={items}
           cartTotal={cartTotal}
           onClose={() => setCheckoutOpen(false)}
+          initialRewardCode={returningMember?.code || (joined ? code : null)}
         />
       )}
     </main>
@@ -364,8 +416,7 @@ function WifiModal({ restaurantName, onClose, onSubmit, submitting, error }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const canSubmit = name && phone && !submitting;
-  return (
+  const canSubmit = name && phone && !submitting;return (
     <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50">
       <div className="w-full max-w-md bg-white rounded-t-2xl p-5">
         <div className="flex justify-between items-center">
@@ -385,7 +436,7 @@ function WifiModal({ restaurantName, onClose, onSubmit, submitting, error }) {
   );
 }
 
-function CheckoutModal({ restaurant, cart, items, cartTotal, onClose }) {
+function CheckoutModal({ restaurant, cart, items, cartTotal, onClose, initialRewardCode }) {
   const [tipPct, setTipPct] = useState(10);
   const [customTip, setCustomTip] = useState("");
   const [name, setName] = useState("");
@@ -395,29 +446,35 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose }) {
   const formRef = useRef(null);
   const [ozowFields, setOzowFields] = useState(null);
   const [ozowPostUrl, setOzowPostUrl] = useState(null);
-  const [rewardCode, setRewardCode] = useState("");
+  const [rewardCode, setRewardCode] = useState(initialRewardCode || "");
   const [rewardStatus, setRewardStatus] = useState(null);
   const [discountPct, setDiscountPct] = useState(0);
+
+  useEffect(() => {
+    if (initialRewardCode) handleApplyReward(initialRewardCode);
+  }, []);
 
   const tipAmount = customTip !== "" ? Number(customTip) : Math.round(cartTotal * (tipPct / 100) * 100) / 100;
   const discountAmount = rewardStatus === "valid" ? Math.round(cartTotal * (discountPct / 100) * 100) / 100 : 0;
   const total = Math.round((cartTotal - discountAmount + tipAmount) * 100) / 100;
 
-  async function handleApplyReward() {
-    if (!rewardCode.trim()) return;
+  async function handleApplyReward(codeOverride) {
+    const codeToCheck = codeOverride || rewardCode;
+    if (!codeToCheck.trim()) return;
     setRewardStatus("checking");
     try {
       const res = await fetch("/api/apply-reward", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ restaurant_id: restaurant.id, code: rewardCode }),
+        body: JSON.stringify({ restaurant_id: restaurant.id, code: codeToCheck }),
       });
       const data = await res.json();
       if (data.valid) {
         setRewardStatus("valid");
         setDiscountPct(data.discount_pct);
       } else {
-        setRewardStatus("invalid");}
+        setRewardStatus("invalid");
+      }
     } catch {
       setRewardStatus("invalid");
     }
@@ -538,8 +595,7 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose }) {
             value={customTip}
             onChange={(e) => setCustomTip(e.target.value)}
             className="w-full border border-line rounded-lg px-3 py-2 text-sm mt-2"
-          />
-        </div>
+          /></div>
 
         <div className="border-t border-line mt-4 pt-3 text-base flex justify-between font-bold">
           <span>Total</span>
