@@ -1,5 +1,4 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createHash } from "crypto";
 
 export async function POST(request) {
   const body = await request.json();
@@ -17,7 +16,7 @@ export async function POST(request) {
     .eq("restaurant_id", restaurant_id)
     .single();
 
-  if (!paymentSettings?.ozow_site_code || !paymentSettings?.ozow_private_key) {
+  if (!paymentSettings?.paystack_subaccount_code) {
     return Response.json(
       { error: "Online payment isn't set up for this restaurant yet." },
       { status: 400 }
@@ -64,52 +63,27 @@ export async function POST(request) {
     return Response.json({ error: "Could not create the order." }, { status: 500 });
   }
 
-  const siteCode = paymentSettings.ozow_site_code;
-  const countryCode = "ZA";
-  const currencyCode = "ZAR";
-  const amount = total.toFixed(2);
-  const isTest = paymentSettings.is_test ? "true" : "false";
-  const notifyUrl = `${origin}/api/ozow-webhook`;
-  const successUrl = `${origin}/order/${transactionReference}?status=success`;
-  const cancelUrl = `${origin}/order/${transactionReference}?status=cancelled`;
-  const errorUrl = `${origin}/order/${transactionReference}?status=error`;
-
-  const hashString = [
-    siteCode,
-    countryCode,
-    currencyCode,
-    amount,
-    transactionReference,
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    notifyUrl,
-    successUrl,
-    errorUrl,
-    cancelUrl,
-    isTest,
-    paymentSettings.ozow_private_key,
-  ].join("").toLowerCase();
-
-  const hash = createHash("sha512").update(hashString).digest("hex");
-
-  return Response.json({
-    postUrl: "https://pay.ozow.com/",
-    fields: {
-      SiteCode: siteCode,
-      CountryCode: countryCode,
-      CurrencyCode: currencyCode,
-      Amount: amount,
-      TransactionReference: transactionReference,
-      NotifyUrl: notifyUrl,
-      SuccessUrl: successUrl,
-      ErrorUrl: errorUrl,
-      CancelUrl: cancelUrl,
-      IsTest: isTest,
-      HashCheck: hash,
+  const paystackRes = await fetch("https://api.paystack.co/transaction/initialize", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      "Content-Type": "application/json",
     },
+    body: JSON.stringify({
+      email: `${transactionReference}@awea-guest.com`,
+      amount: Math.round(total * 100),
+      currency: "ZAR",
+      reference: transactionReference,
+      callback_url: `${origin}/order/${transactionReference}`,
+      subaccount: paymentSettings.paystack_subaccount_code,
+    }),
   });
+
+  const paystackData = await paystackRes.json();
+
+  if (!paystackData.status) {
+    return Response.json({ error: "Could not start payment. Please try again." }, { status: 500 });
+  }
+
+  return Response.json({ authorization_url: paystackData.data.authorization_url });
 }
