@@ -444,8 +444,6 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose, initialRew
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const formRef = useRef(null);
-  const [ozowFields, setOzowFields] = useState(null);
-  const [ozowPostUrl, setOzowPostUrl] = useState(null);
   const [rewardCode, setRewardCode] = useState(initialRewardCode || "");
   const [rewardStatus, setRewardStatus] = useState(null);
   const [discountPct, setDiscountPct] = useState(0);
@@ -503,14 +501,12 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose, initialRew
         }),
       });
       const data = await res.json();
-      setLoading(false);
       if (!res.ok) {
+        setLoading(false);
         setError(data.error || "Something went wrong.");
         return;
       }
-      setOzowPostUrl(data.postUrl);
-      setOzowFields(data.fields);
-      setTimeout(() => formRef.current?.submit(), 50);
+      window.location.href = data.authorization_url;
     } catch {
       setLoading(false);
       setError("Something went wrong — please try again.");
@@ -616,15 +612,6 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose, initialRew
         >
           {loading ? "Preparing payment..." : `Pay R${total.toFixed(2)}`}
         </button>
-
-        {/* Hidden auto-submitting form to hand off to Ozow's hosted payment page */}
-        {ozowFields && (
-          <form ref={formRef} action={ozowPostUrl} method="POST" className="hidden">
-            {Object.entries(ozowFields).map(([key, value]) => (
-              <input key={key} type="hidden" name={key} value={value} />
-            ))}
-          </form>
-        )}
       </div>
     </div>
   );
