@@ -65,6 +65,7 @@ export default async function AdminRestaurantPage({ params }) {
               <div className="text-right">
                 <div className="font-mono">{s.reward_code}</div>
                 <div className="text-muted">{s.marketing_opt_in ? "opted in to marketing" : "rewards only"}</div>
+                <div className="text-amber font-semibold mt-0.5">{s.visit_count || 1} visit{(s.visit_count || 1) !== 1 ? "s" : ""}</div>
               </div>
             </div>
           ))}
