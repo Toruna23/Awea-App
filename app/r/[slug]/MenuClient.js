@@ -112,7 +112,7 @@ export default function MenuClient({ restaurant, categories, items }) {
 
     setSubmitting(false);
     if (insertError) {
-      setError("Something went wrong — please try again.");
+      setError("Something went wrong, please try again.");
       return;
     }
     setCode(rewardCode);
@@ -136,7 +136,7 @@ export default function MenuClient({ restaurant, categories, items }) {
 
     setWifiSubmitting(false);
     if (insertError) {
-      setWifiError("Something went wrong — please try again.");
+      setWifiError("Something went wrong, please try again.");
       return;
     }
     setWifiUnlocked(true);
@@ -444,7 +444,8 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose, initialRew
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const formRef = useRef(null);
-  const [rewardCode, setRewardCode] = useState(initialRewardCode || "");
+const [rewardCode, setRewardCode] = useState(initialRewardCode || "");
+  const [tableNumber, setTableNumber] = useState("");
   const [rewardStatus, setRewardStatus] = useState(null);
   const [discountPct, setDiscountPct] = useState(0);
 
@@ -496,6 +497,7 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose, initialRew
           tip: tipAmount,
           customer_name: name,
           customer_phone: phone,
+          table_number: tableNumber,
           origin: window.location.origin,
           reward_code: rewardStatus === "valid" ? rewardCode.trim() : null,
         }),
@@ -600,7 +602,8 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose, initialRew
 
         <div className="mt-4">
           <input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-line rounded-lg px-3 py-2.5 text-sm mb-2" />
-          <input placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-line rounded-lg px-3 py-2.5 text-sm mb-3" />
+          <input placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-line rounded-lg px-3 py-2.5 text-sm mb-2" />
+          <input placeholder="Table number" value={tableNumber} onChange={(e) => setTableNumber(e.target.value)} className="w-full border border-line rounded-lg px-3 py-2.5 text-sm mb-3" />
         </div>
 
         {error && <div className="text-rust text-xs mb-3">{error}</div>}
