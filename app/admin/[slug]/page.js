@@ -23,6 +23,7 @@ export default async function AdminRestaurantPage({ params }) {
     .single();
 
   const restaurantWithPayment = { ...restaurant, ...paymentSettings };
+  const { data: isAdmin } = await supabase.rpc("is_platform_admin");
 
   const { data: categories } = await supabase
     .from("menu_categories")
@@ -55,7 +56,7 @@ export default async function AdminRestaurantPage({ params }) {
         View live orders →
       </Link>
 
-      <AdminMenuEditor restaurant={restaurantWithPayment} categories={categories || []} items={items || []} />
+      <AdminMenuEditor restaurant={restaurantWithPayment} categories={categories || []} items={items || []} isPlatformAdmin={!!isAdmin} />
 
       <div className="mt-10">
         <div className="font-display font-semibold mb-2">Rewards signups ({signups?.length ?? 0} shown, most recent 20)</div>
