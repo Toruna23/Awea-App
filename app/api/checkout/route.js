@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request) {
   const body = await request.json();
-  const { restaurant_id, items, tip, customer_name, customer_phone, origin, reward_code } = body;
+  const { restaurant_id, items, tip, customer_name, customer_phone, table_number, origin, reward_code } = body;
 
   if (!restaurant_id || !items || !Array.isArray(items) || items.length === 0) {
     return Response.json({ error: "Missing order details." }, { status: 400 });
@@ -54,7 +54,8 @@ export async function POST(request) {
     reward_code: verifiedRewardCode,
     total,
     transaction_reference: transactionReference,
-    customer_name: customer_name || null,
+    customer_phone: customer_phone || null,
+    table_number: table_number || null,
     customer_phone: customer_phone || null,
     status: "pending",
   });
