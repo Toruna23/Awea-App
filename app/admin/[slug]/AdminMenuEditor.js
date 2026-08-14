@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function AdminMenuEditor({ restaurant, categories, items }) {
+export default function AdminMenuEditor({ restaurant, categories, items, isPlatformAdmin }) {
   const router = useRouter();
   const supabase = createClient();
   const [newCatName, setNewCatName] = useState("");
@@ -29,11 +29,11 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
     router.refresh();
   }
 
-  const [paystack, setPaystack] = useState({
+   const [paystack, setPaystack] = useState({
     business_name: restaurant.name || "",
     settlement_bank: "",
     account_number: "",
-    percentage_charge: 0,
+    percentage_charge: restaurant.paystack_percentage_charge || 0,
   });
   const [savingPaystack, setSavingPaystack] = useState(false);
   const [paystackError, setPaystackError] = useState("");
@@ -102,37 +102,39 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
 
   return (
     <div className="mt-6">
-      {/* Tier / rewards controls */}
-      <div className="bg-white border border-line rounded-xl p-4 mb-6">
-        <div className="font-display font-semibold mb-3 text-sm">Plan settings</div>
-        <div className="flex gap-6 text-xs">
-          <div>
-            <div className="text-muted mb-1">Tier</div>
-            <select
-              defaultValue={restaurant.tier}
-              onChange={(e) => updateSettings("tier", e.target.value)}
-              className="border border-line rounded-lg px-2 py-1"
-            >
-              <option value="free">Free</option>
-              <option value="pro">Pro</option>
-            </select>
+{/* Tier / rewards controls — platform admin only */}
+      {isPlatformAdmin && (
+        <div className="bg-white border border-line rounded-xl p-4 mb-6">
+          <div className="font-display font-semibold mb-3 text-sm">Plan settings</div>
+          <div className="flex gap-6 text-xs">
+            <div>
+              <div className="text-muted mb-1">Tier</div>
+              <select
+                defaultValue={restaurant.tier}
+                onChange={(e) => updateSettings("tier", e.target.value)}
+                className="border border-line rounded-lg px-2 py-1"
+              >
+                <option value="free">Free</option>
+                <option value="pro">Pro</option>
+              </select>
+            </div>
+            <div>
+              <div className="text-muted mb-1">Rewards</div>
+              <select
+                defaultValue={restaurant.rewards_status}
+                onChange={(e) => updateSettings("rewards_status", e.target.value)}
+                className="border border-line rounded-lg px-2 py-1"
+              >
+                <option value="off">Off</option>
+                <option value="trial">Trial</option>
+                <option value="active">Active (paid)</option>
+                <option value="locked">Locked (trial ended)</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <div className="text-muted mb-1">Rewards</div>
-            <select
-              defaultValue={restaurant.rewards_status}
-              onChange={(e) => updateSettings("rewards_status", e.target.value)}
-              className="border border-line rounded-lg px-2 py-1"
-            >
-              <option value="off">Off</option>
-              <option value="trial">Trial</option>
-              <option value="active">Active (paid)</option>
-              <option value="locked">Locked (trial ended)</option>
-            </select>
-          </div>
+          {savingSettings && <div className="text-muted text-xs mt-2">Saving...</div>}
         </div>
-        {savingSettings && <div className="text-muted text-xs mt-2">Saving...</div>}
-      </div>
+      )}
 
       {/* Socials, Google review, WiFi */}
       <div className="bg-white border border-line rounded-xl p-4 mb-6">
@@ -169,12 +171,15 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
         {paystackSuccess && (
           <div className="text-sage text-xs mb-3">✓ Payments are set up for this restaurant.</div>
         )}
-        <input
-          placeholder="Business name"
-          value={paystack.business_name}
-          onChange={(e) => setPaystack({ ...paystack, business_name: e.target.value })}
-          className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
-        />
+     {isPlatformAdmin && (
+          <input
+            placeholder="Awea's cut % (0 = restaurant gets 100%)"
+            type="number"
+            value={paystack.percentage_charge}
+            onChange={(e) => setPaystack({ ...paystack, percentage_charge: e.target.value })}
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
+          />
+        )}
         <input
           placeholder="Settlement bank code (e.g. 632005 for FNB)"
           value={paystack.settlement_bank}
