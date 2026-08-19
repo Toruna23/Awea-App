@@ -146,6 +146,7 @@ export default function AdminMenuEditor({ restaurant, categories, items, isPlatf
           ["tiktok_url", "TikTok URL"],
           ["facebook_url", "Facebook URL"],
           ["google_review_url", "Google review link"],
+          ["whatsapp_url", "WhatsApp catalog link"],
           ["wifi_ssid", "WiFi network name"],
           ["wifi_password", "WiFi password"],
         ].map(([field, label]) => (
