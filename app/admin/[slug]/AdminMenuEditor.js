@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function AdminMenuEditor({ restaurant, categories, items, isPlatformAdmin }) {
+export default function AdminMenuEditor({ restaurant, categories, items }) {
   const router = useRouter();
   const supabase = createClient();
   const [newCatName, setNewCatName] = useState("");
@@ -29,11 +29,11 @@ export default function AdminMenuEditor({ restaurant, categories, items, isPlatf
     router.refresh();
   }
 
-   const [paystack, setPaystack] = useState({
+  const [paystack, setPaystack] = useState({
     business_name: restaurant.name || "",
     settlement_bank: "",
     account_number: "",
-    percentage_charge: restaurant.paystack_percentage_charge || 0,
+    percentage_charge: 0,
   });
   const [savingPaystack, setSavingPaystack] = useState(false);
   const [paystackError, setPaystackError] = useState("");
@@ -93,6 +93,38 @@ export default function AdminMenuEditor({ restaurant, categories, items, isPlatf
     router.refresh();
   }
 
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  function startEdit(item) {
+    setEditingId(item.id);
+    setEditForm({
+      category_id: item.category_id,
+      name: item.name,
+      description: item.description || "",
+      price: item.price,
+      image_url: item.image_url || "",
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditForm({});
+  }
+
+  async function saveEdit(id) {
+    await supabase.from("menu_items").update({
+      category_id: editForm.category_id,
+      name: editForm.name.trim(),
+      description: editForm.description.trim(),
+      price: Number(editForm.price),
+      image_url: editForm.image_url.trim() || null,
+    }).eq("id", id);
+    setEditingId(null);
+    setEditForm({});
+    router.refresh();
+  }
+
   async function updateSettings(field, value) {
     setSavingSettings(true);
     await supabase.from("restaurants").update({ [field]: value }).eq("id", restaurant.id);
@@ -102,39 +134,37 @@ export default function AdminMenuEditor({ restaurant, categories, items, isPlatf
 
   return (
     <div className="mt-6">
-{/* Tier / rewards controls — platform admin only */}
-      {isPlatformAdmin && (
-        <div className="bg-white border border-line rounded-xl p-4 mb-6">
-          <div className="font-display font-semibold mb-3 text-sm">Plan settings</div>
-          <div className="flex gap-6 text-xs">
-            <div>
-              <div className="text-muted mb-1">Tier</div>
-              <select
-                defaultValue={restaurant.tier}
-                onChange={(e) => updateSettings("tier", e.target.value)}
-                className="border border-line rounded-lg px-2 py-1"
-              >
-                <option value="free">Free</option>
-                <option value="pro">Pro</option>
-              </select>
-            </div>
-            <div>
-              <div className="text-muted mb-1">Rewards</div>
-              <select
-                defaultValue={restaurant.rewards_status}
-                onChange={(e) => updateSettings("rewards_status", e.target.value)}
-                className="border border-line rounded-lg px-2 py-1"
-              >
-                <option value="off">Off</option>
-                <option value="trial">Trial</option>
-                <option value="active">Active (paid)</option>
-                <option value="locked">Locked (trial ended)</option>
-              </select>
-            </div>
+      {/* Tier / rewards controls */}
+      <div className="bg-white border border-line rounded-xl p-4 mb-6">
+        <div className="font-display font-semibold mb-3 text-sm">Plan settings</div>
+        <div className="flex gap-6 text-xs">
+          <div>
+            <div className="text-muted mb-1">Tier</div>
+            <select
+              defaultValue={restaurant.tier}
+              onChange={(e) => updateSettings("tier", e.target.value)}
+              className="border border-line rounded-lg px-2 py-1"
+            >
+              <option value="free">Free</option>
+              <option value="pro">Pro</option>
+            </select>
           </div>
-          {savingSettings && <div className="text-muted text-xs mt-2">Saving...</div>}
+          <div>
+            <div className="text-muted mb-1">Rewards</div>
+            <select
+              defaultValue={restaurant.rewards_status}
+              onChange={(e) => updateSettings("rewards_status", e.target.value)}
+              className="border border-line rounded-lg px-2 py-1"
+            >
+              <option value="off">Off</option>
+              <option value="trial">Trial</option>
+              <option value="active">Active (paid)</option>
+              <option value="locked">Locked (trial ended)</option>
+            </select>
+          </div>
         </div>
-      )}
+        {savingSettings && <div className="text-muted text-xs mt-2">Saving...</div>}
+      </div>
 
       {/* Socials, Google review, WiFi */}
       <div className="bg-white border border-line rounded-xl p-4 mb-6">
@@ -146,7 +176,6 @@ export default function AdminMenuEditor({ restaurant, categories, items, isPlatf
           ["tiktok_url", "TikTok URL"],
           ["facebook_url", "Facebook URL"],
           ["google_review_url", "Google review link"],
-          ["whatsapp_url", "WhatsApp catalog link"],
           ["wifi_ssid", "WiFi network name"],
           ["wifi_password", "WiFi password"],
         ].map(([field, label]) => (
@@ -172,15 +201,12 @@ export default function AdminMenuEditor({ restaurant, categories, items, isPlatf
         {paystackSuccess && (
           <div className="text-sage text-xs mb-3">✓ Payments are set up for this restaurant.</div>
         )}
-     {isPlatformAdmin && (
-          <input
-            placeholder="Awea's cut % (0 = restaurant gets 100%)"
-            type="number"
-            value={paystack.percentage_charge}
-            onChange={(e) => setPaystack({ ...paystack, percentage_charge: e.target.value })}
-            className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
-          />
-        )}
+        <input
+          placeholder="Business name"
+          value={paystack.business_name}
+          onChange={(e) => setPaystack({ ...paystack, business_name: e.target.value })}
+          className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-2"
+        />
         <input
           placeholder="Settlement bank code (e.g. 632005 for FNB)"
           value={paystack.settlement_bank}
@@ -225,13 +251,40 @@ export default function AdminMenuEditor({ restaurant, categories, items, isPlatf
       <div className="font-display font-semibold mb-2">Menu items</div>
       <div className="flex flex-col gap-2 mb-4">
         {items.map((item) => (
-          <div key={item.id} className="flex justify-between items-center bg-white border border-line rounded-lg p-3 text-xs">
-            <div>
-              <div className="font-medium">{item.name} — R{item.price}</div>
-              <div className="text-muted">{categories.find((c) => c.id === item.category_id)?.name}</div>
+          editingId === item.id ? (
+            <div key={item.id} className="bg-white border border-amber rounded-lg p-3">
+              <select
+                value={editForm.category_id}
+                onChange={(e) => setEditForm({ ...editForm, category_id: e.target.value })}
+                className="w-full border border-line rounded-lg px-2 py-1.5 text-xs mb-2"
+              >
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <input placeholder="Item name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                className="w-full border border-line rounded-lg px-2 py-1.5 text-xs mb-2" />
+              <input placeholder="Description" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                className="w-full border border-line rounded-lg px-2 py-1.5 text-xs mb-2" />
+              <input placeholder="Price (R)" type="number" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                className="w-full border border-line rounded-lg px-2 py-1.5 text-xs mb-2" />
+              <input placeholder="Image URL" value={editForm.image_url} onChange={(e) => setEditForm({ ...editForm, image_url: e.target.value })}
+                className="w-full border border-line rounded-lg px-2 py-1.5 text-xs mb-2" />
+              <div className="flex gap-2">
+                <button onClick={() => saveEdit(item.id)} className="flex-1 bg-amber text-white rounded-lg py-1.5 text-xs font-bold">Save</button>
+                <button onClick={cancelEdit} className="flex-1 border border-line rounded-lg py-1.5 text-xs">Cancel</button>
+              </div>
             </div>
-            <button onClick={() => deleteItem(item.id)} className="text-rust">Delete</button>
-          </div>
+          ) : (
+            <div key={item.id} className="flex justify-between items-center bg-white border border-line rounded-lg p-3 text-xs">
+              <div>
+                <div className="font-medium">{item.name} — R{item.price}</div>
+                <div className="text-muted">{categories.find((c) => c.id === item.category_id)?.name}</div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => startEdit(item)} className="text-amber">Edit</button>
+                <button onClick={() => deleteItem(item.id)} className="text-rust">Delete</button>
+              </div>
+            </div>
+          )
         ))}
       </div>
 
