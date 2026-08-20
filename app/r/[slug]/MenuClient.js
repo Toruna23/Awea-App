@@ -265,7 +265,7 @@ export default function MenuClient({ restaurant, categories, items }) {
           </div>
         )}
 
-       {!canOrder && (
+        {!canOrder && (
           <div className="px-4 pt-2.5 text-muted text-xs italic">
             {restaurant.browse_note || "Browse below, then just tell your waiter what you'd like."}
           </div>
