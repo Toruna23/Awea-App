@@ -11,6 +11,7 @@ const TIP_OPTIONS = [0, 10, 15, 20];
 
 export default function MenuClient({ restaurant, categories, items }) {
   const [cat, setCat] = useState(categories[0]?.id);
+  const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [joined, setJoined] = useState(false);
   const [code, setCode] = useState("");
@@ -39,7 +40,15 @@ export default function MenuClient({ restaurant, categories, items }) {
   ].filter((s) => s.url);
 
   const itemsInCat = items.filter((i) => i.category_id === cat);
-  const activeIndex = activeItem ? itemsInCat.findIndex((i) => i.id === activeItem.id) : -1;
+  const searchResults = search.trim()
+    ? items.filter((i) => {
+        const q = search.trim().toLowerCase();
+        const catName = categories.find((c) => c.id === i.category_id)?.name || "";
+        return i.name.toLowerCase().includes(q) || catName.toLowerCase().includes(q);
+      })
+    : null;
+  const displayedItems = searchResults || itemsInCat;
+  const activeIndex = activeItem ? displayedItems.findIndex((i) => i.id === activeItem.id) : -1;
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
   const cartTotal = Object.entries(cart).reduce(
     (sum, [id, qty]) => sum + qty * items.find((i) => i.id === id).price, 0
@@ -55,9 +64,9 @@ export default function MenuClient({ restaurant, categories, items }) {
   }
 
   function goToOffset(offset) {
-    if (activeIndex === -1 || itemsInCat.length < 2) return;
-    const next = (activeIndex + offset + itemsInCat.length) % itemsInCat.length;
-    setActiveItem(itemsInCat[next]);
+    if (activeIndex === -1 || displayedItems.length < 2) return;
+    const next = (activeIndex + offset + displayedItems.length) % displayedItems.length;
+    setActiveItem(displayedItems[next]);
   }
 
   useEffect(() => {
@@ -222,22 +231,37 @@ export default function MenuClient({ restaurant, categories, items }) {
           <div className="mx-5 mt-3 bg-line/40 border border-dashed border-line rounded-xl px-3 py-2.5 text-muted text-xs">
             Rewards program paused for now — ask your host
           </div>
-        )}
+        {/* Search */}
+        <div className="px-4 pt-4">
+          <input
+            placeholder="Search products or categories"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full border border-line rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
 
         {/* Categories */}
-        <div className="hide-scrollbar flex gap-2 px-4 pt-4 overflow-x-auto">
-          {categories.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setCat(c.id)}
-              className={`whitespace-nowrap px-3.5 py-1.5 rounded-full border text-xs font-medium ${
-                cat === c.id ? "bg-amber border-amber text-white" : "border-line text-muted"
-              }`}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
+        {!searchResults && (
+          <div className="hide-scrollbar flex gap-2 px-4 pt-3 overflow-x-auto">
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setCat(c.id)}
+                className={`whitespace-nowrap px-3.5 py-1.5 rounded-full border text-xs font-medium ${
+                  cat === c.id ? "bg-amber border-amber text-white" : "border-line text-muted"
+                }`}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+        {searchResults && (
+          <div className="px-4 pt-3 text-muted text-xs">
+            {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} for &quot;{search}&quot;
+          </div>
+        )}
 
        {!canOrder && (
           <div className="px-4 pt-2.5 text-muted text-xs italic">
@@ -247,7 +271,7 @@ export default function MenuClient({ restaurant, categories, items }) {
 
         {/* Items */}
         <div className="px-4 pt-3 pb-24 flex flex-col gap-3">
-          {itemsInCat.map((item, idx) => (
+          {displayedItems.map((item, idx) => (
             <div
               key={item.id}
               style={{ animationDelay: `${idx * 60}ms` }}
@@ -279,10 +303,11 @@ export default function MenuClient({ restaurant, categories, items }) {
               )}
             </div>
           ))}
-          {itemsInCat.length === 0 && (
-            <div className="text-muted text-sm text-center py-8">No items in this category yet.</div>
+          {displayedItems.length === 0 && (
+            <div className="text-muted text-sm text-center py-8">
+              {searchResults ? "No matches found." : "No items in this category yet."}
+            </div>
           )}
-        </div>
 
         {canOrder && cartCount > 0 && (
           <button
@@ -319,7 +344,7 @@ export default function MenuClient({ restaurant, categories, items }) {
           onClose={() => setActiveItem(null)}
           onPrev={() => goToOffset(-1)}
           onNext={() => goToOffset(1)}
-          canNavigate={itemsInCat.length > 1}
+          canNavigate={displayedItems.length > 1}
           canOrder={canOrder}
           qty={cart[activeItem.id] || 0}
           onAdjust={(delta) => adjustCart(activeItem.id, delta)}
