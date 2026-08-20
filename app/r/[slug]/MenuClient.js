@@ -231,6 +231,7 @@ export default function MenuClient({ restaurant, categories, items }) {
           <div className="mx-5 mt-3 bg-line/40 border border-dashed border-line rounded-xl px-3 py-2.5 text-muted text-xs">
             Rewards program paused for now — ask your host
           </div>
+        )}
         {/* Search */}
         <div className="px-4 pt-4">
           <input
