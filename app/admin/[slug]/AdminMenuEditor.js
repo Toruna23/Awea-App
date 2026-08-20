@@ -8,6 +8,7 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
   const router = useRouter();
   const supabase = createClient();
   const [newCatName, setNewCatName] = useState("");
+  const [search, setSearch] = useState("");
   const [newItem, setNewItem] = useState({ category_id: categories[0]?.id || "", name: "", description: "", price: "", image_url: "" });
   const [savingSettings, setSavingSettings] = useState(false);
   const [links, setLinks] = useState({
@@ -87,9 +88,13 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
     setNewItem({ category_id: newItem.category_id, name: "", description: "", price: "", image_url: "" });
     router.refresh();
   }
-
-  async function deleteItem(id) {
+async function deleteItem(id) {
     await supabase.from("menu_items").delete().eq("id", id);
+    router.refresh();
+  }
+  async function deleteCategory(id, name) {
+    if (!window.confirm(`Delete "${name}"? This also deletes every item inside it.`)) return;
+    await supabase.from("menu_categories").delete().eq("id", id);
     router.refresh();
   }
 
@@ -236,7 +241,10 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
       <div className="font-display font-semibold mb-2">Categories</div>
       <div className="flex flex-wrap gap-2 mb-3">
         {categories.map((c) => (
-          <span key={c.id} className="text-xs px-2.5 py-1 rounded-full bg-line/40">{c.name}</span>
+          <span key={c.id} className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-line/40">
+            {c.name}
+            <button onClick={() => deleteCategory(c.id, c.name)} className="text-rust font-bold">×</button>
+          </span>
         ))}
       </div>
       <div className="flex gap-2 mb-6">
@@ -249,8 +257,21 @@ export default function AdminMenuEditor({ restaurant, categories, items }) {
 
       {/* Items */}
       <div className="font-display font-semibold mb-2">Menu items</div>
+      <input
+        placeholder="Search by product or category name"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-full border border-line rounded-lg px-3 py-2 text-sm mb-3"
+      />
       <div className="flex flex-col gap-2 mb-4">
-        {items.map((item) => (
+        {items
+          .filter((item) => {
+            if (!search.trim()) return true;
+            const q = search.trim().toLowerCase();
+            const catName = categories.find((c) => c.id === item.category_id)?.name || "";
+            return item.name.toLowerCase().includes(q) || catName.toLowerCase().includes(q);
+          })
+          .map((item) => (
           editingId === item.id ? (
             <div key={item.id} className="bg-white border border-amber rounded-lg p-3">
               <select
