@@ -232,6 +232,7 @@ export default function MenuClient({ restaurant, categories, items }) {
             Rewards program paused for now — ask your host
           </div>
         )}
+
         {/* Search */}
         <div className="px-4 pt-4">
           <input
