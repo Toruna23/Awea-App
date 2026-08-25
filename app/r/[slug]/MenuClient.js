@@ -122,7 +122,7 @@ export default function MenuClient({ restaurant, categories, items }) {
 
     setSubmitting(false);
     if (insertError) {
-      setError("Something went wrong, please try again.");
+      setError("Something went wrong — please try again.");
       return;
     }
     setCode(rewardCode);
@@ -146,7 +146,7 @@ export default function MenuClient({ restaurant, categories, items }) {
 
     setWifiSubmitting(false);
     if (insertError) {
-      setWifiError("Something went wrong, please try again.");
+      setWifiError("Something went wrong — please try again.");
       return;
     }
     setWifiUnlocked(true);
@@ -172,8 +172,7 @@ export default function MenuClient({ restaurant, categories, items }) {
           <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.1) 55%, rgba(0,0,0,0.35))" }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
             {restaurant.logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={restaurant.logo_url} alt={restaurant.name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow mb-2" />
+              // eslint-disable-next-line @next/next/no-img-element<img src={restaurant.logo_url} alt={restaurant.name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow mb-2" />
             )}
             <div className="font-display text-3xl font-black text-white" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
               {restaurant.name}
@@ -227,7 +226,8 @@ export default function MenuClient({ restaurant, categories, items }) {
               {loggingVisit ? "..." : "Log this visit"}
             </button>
           </div>
-        )}{rewards === "locked" && (
+        )}
+        {rewards === "locked" && (
           <div className="mx-5 mt-3 bg-line/40 border border-dashed border-line rounded-xl px-3 py-2.5 text-muted text-xs">
             Rewards program paused for now — ask your host
           </div>
@@ -310,6 +310,7 @@ export default function MenuClient({ restaurant, categories, items }) {
               {searchResults ? "No matches found." : "No items in this category yet."}
             </div>
           )}
+        </div>
 
         {canOrder && cartCount > 0 && (
           <button
@@ -355,8 +356,7 @@ export default function MenuClient({ restaurant, categories, items }) {
 
       {checkoutOpen && (
         <CheckoutModal
-          restaurant={restaurant}
-          cart={cart}
+          restaurant={restaurant}cart={cart}
           items={items}
           cartTotal={cartTotal}
           onClose={() => setCheckoutOpen(false)}
@@ -444,7 +444,8 @@ function WifiModal({ restaurantName, onClose, onSubmit, submitting, error }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const canSubmit = name && phone && !submitting;return (
+  const canSubmit = name && phone && !submitting;
+  return (
     <div className="fixed inset-0 bg-black/60 flex items-end justify-center z-50">
       <div className="w-full max-w-md bg-white rounded-t-2xl p-5">
         <div className="flex justify-between items-center">
@@ -472,10 +473,10 @@ function CheckoutModal({ restaurant, cart, items, cartTotal, onClose, initialRew
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const formRef = useRef(null);
-const [rewardCode, setRewardCode] = useState(initialRewardCode || "");
-  const [tableNumber, setTableNumber] = useState("");
+  const [rewardCode, setRewardCode] = useState(initialRewardCode || "");
   const [rewardStatus, setRewardStatus] = useState(null);
   const [discountPct, setDiscountPct] = useState(0);
+  const [tableNumber, setTableNumber] = useState("");
 
   useEffect(() => {
     if (initialRewardCode) handleApplyReward(initialRewardCode);
@@ -524,8 +525,7 @@ const [rewardCode, setRewardCode] = useState(initialRewardCode || "");
           items: orderItems,
           tip: tipAmount,
           customer_name: name,
-          customer_phone: phone,
-          table_number: tableNumber,
+          customer_phone: phone,table_number: tableNumber,
           origin: window.location.origin,
           reward_code: rewardStatus === "valid" ? rewardCode.trim() : null,
         }),
@@ -621,7 +621,8 @@ const [rewardCode, setRewardCode] = useState(initialRewardCode || "");
             value={customTip}
             onChange={(e) => setCustomTip(e.target.value)}
             className="w-full border border-line rounded-lg px-3 py-2 text-sm mt-2"
-          /></div>
+          />
+        </div>
 
         <div className="border-t border-line mt-4 pt-3 text-base flex justify-between font-bold">
           <span>Total</span>
@@ -648,7 +649,7 @@ const [rewardCode, setRewardCode] = useState(initialRewardCode || "");
   );
 }
 
- function SocialIcon({ type }) {
+function SocialIcon({ type }) {
   const common = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "currentColor" };
   if (type === "instagram") return (
     <svg {...common}><path d="M12 2c2.7 0 3.05.01 4.12.06 1.06.05 1.79.22 2.43.47a4.9 4.9 0 0 1 1.77 1.15 4.9 4.9 0 0 1 1.15 1.77c.25.64.42 1.37.47 2.43C21.99 8.95 22 9.3 22 12s-.01 3.05-.06 4.12c-.05 1.06-.22 1.79-.47 2.43a4.9 4.9 0 0 1-1.15 1.77 4.9 4.9 0 0 1-1.77 1.15c-.64.25-1.37.42-2.43.47C15.05 21.99 14.7 22 12 22s-3.05-.01-4.12-.06c-1.06-.05-1.79-.22-2.43-.47a4.9 4.9 0 0 1-1.77-1.15 4.9 4.9 0 0 1-1.15-1.77c-.25-.64-.42-1.37-.47-2.43C2.01 15.05 2 14.7 2 12s.01-3.05.06-4.12c.05-1.06.22-1.79.47-2.43A4.9 4.9 0 0 1 3.68 3.68 4.9 4.9 0 0 1 5.45 2.53c.64-.25 1.37-.42 2.43-.47C8.95 2.01 9.3 2 12 2Zm0 2c-2.65 0-2.97.01-4.02.06-.86.04-1.33.18-1.64.3-.41.16-.71.35-1.02.66-.31.31-.5.61-.66 1.02-.12.31-.26.78-.3 1.64C4.31 9.03 4.3 9.35 4.3 12s.01 2.97.06 4.02c.04.86.18 1.33.3 1.64.16.41.35.71.66 1.02.31.31.61.5 1.02.66.31.12.78.26 1.64.3 1.05.05 1.37.06 4.02.06s2.97-.01 4.02-.06c.86-.04 1.33-.18 1.64-.3.41-.16.71-.35 1.02-.66.31-.31.5-.61.66-1.02.12-.31.26-.78.3-1.64.05-1.05.06-1.37.06-4.02s-.01-2.97-.06-4.02c-.04-.86-.18-1.33-.3-1.64a2.9 2.9 0 0 0-.66-1.02 2.9 2.9 0 0 0-1.02-.66c-.31-.12-.78-.26-1.64-.3C14.97 4.31 14.65 4.3 12 4.3Zm0 3.4a4.3 4.3 0 1 1 0 8.6 4.3 4.3 0 0 1 0-8.6Zm0 2a2.3 2.3 0 1 0 0 4.6 2.3 2.3 0 0 0 0-4.6Zm4.5-3.6a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
