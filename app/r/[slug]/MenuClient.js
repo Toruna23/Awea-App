@@ -167,12 +167,15 @@ export default function MenuClient({ restaurant, categories, items }) {
         <div className="relative w-full h-52 bg-line">
           {restaurant.cover_image_url && (
             // eslint-disable-next-line @next/next/no-img-element
+
             <img src={restaurant.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
           )}
           <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.1) 55%, rgba(0,0,0,0.35))" }} />
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
             {restaurant.logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element<img src={restaurant.logo_url} alt={restaurant.name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow mb-2" />
+              // eslint-disable-next-line @next/next/no-img-element
+
+<img src={restaurant.logo_url} alt={restaurant.name} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow mb-2" />
             )}
             <div className="font-display text-3xl font-black text-white" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
               {restaurant.name}
