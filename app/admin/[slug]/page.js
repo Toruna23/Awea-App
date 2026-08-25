@@ -55,7 +55,10 @@ export default async function AdminRestaurantPage({ params }) {
       <Link href={`/admin/${restaurant.slug}/orders`} className="text-amber text-xs underline">
         View live orders →
       </Link>
-
+<br />
+      <Link href={`/admin/${restaurant.slug}/campaigns`} className="text-amber text-xs underline">
+        Send email specials →
+      </Link>
       <AdminMenuEditor restaurant={restaurantWithPayment} categories={categories || []} items={items || []} isPlatformAdmin={!!isAdmin} />
 
       <div className="mt-10">
