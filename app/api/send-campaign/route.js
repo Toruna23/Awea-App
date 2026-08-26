@@ -1,6 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+function emailSafeHtml(html) {
+  return html
+    .replace(/<p class="ql-align-center">/g, '<p style="text-align:center;">')
+    .replace(/<p class="ql-align-right">/g, '<p style="text-align:right;">')
+    .replace(/<p class="ql-align-justify">/g, '<p style="text-align:justify;">');
+}
+
 export async function POST(request) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -33,7 +40,7 @@ export async function POST(request) {
   const html = `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
       ${header_image_url ? `<img src="${header_image_url}" alt="" style="width:100%; border-radius: 8px;" />` : ""}
-      <div style="white-space: pre-wrap; margin-top: 16px; color: #241F17;">${body}</div>
+      <div style="margin-top: 16px; color: #241F17; line-height: 1.5;">${emailSafeHtml(body)}</div>
       ${image_url ? `<img src="${image_url}" alt="" style="width:100%; border-radius: 8px; margin-top: 16px;" />` : ""}
       ${cta_text && cta_url ? `<div style="margin-top: 20px;"><a href="${cta_url}" style="background:#C98A2E; color:#fff; padding: 12px 20px; border-radius: 8px; text-decoration:none; display:inline-block; font-weight:bold;">${cta_text}</a></div>` : ""}
     </div>
