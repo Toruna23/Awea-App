@@ -38,7 +38,7 @@ export default async function CampaignsPage({ params }) {
       </div>
 
       <div className="bg-amber/10 border border-amber rounded-xl p-3 text-xs mb-4">
-        Test mode — only your own Resend account email will actually receive anything right now. Everyone else shows as &quot;blocked&quot; until a real domain is verified.
+        Test mode: only your own Resend account email will actually receive anything right now. Everyone else shows as &quot;blocked&quot; until a real domain is verified.
       </div>
 
       <CampaignForm restaurantId={restaurant.id} />
