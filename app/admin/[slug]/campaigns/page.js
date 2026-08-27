@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import CampaignForm from "./CampaignForm";
+import CampaignHistory from "./CampaignHistory";
 
 export const revalidate = 0;
 
@@ -43,20 +44,8 @@ export default async function CampaignsPage({ params }) {
 
       <CampaignForm restaurantId={restaurant.id} />
 
-      <div className="font-display font-semibold mt-8 mb-2">Past campaigns</div>
-      <div className="flex flex-col gap-2">
-        {(history || []).map((c) => (
-          <div key={c.id} className="bg-white border border-line rounded-lg p-3 text-xs">
-            <div className="font-medium">{c.subject}</div>
-            <div className="text-muted mt-1">
-              {new Date(c.sent_at).toLocaleString()} · {c.success_count} sent, {c.failure_count} blocked, of {c.recipient_count} total
-            </div>
-          </div>
-        ))}
-        {(!history || history.length === 0) && (
-          <div className="text-muted text-sm">No campaigns sent yet.</div>
-        )}
-      </div>
+    <div className="font-display font-semibold mt-8 mb-2">Past & scheduled newsletters</div>
+      <CampaignHistory initialHistory={history} /> 
     </main>
   );
 }
