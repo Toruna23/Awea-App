@@ -1,12 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-function emailSafeHtml(html) {
-  return html
-    .replace(/<p class="ql-align-center">/g, '<p style="text-align:center;">')
-    .replace(/<p class="ql-align-right">/g, '<p style="text-align:right;">')
-    .replace(/<p class="ql-align-justify">/g, '<p style="text-align:justify;">');
-}
+import { sendCampaignToRestaurant } from "@/lib/sendCampaign";
 
 export async function POST(request) {
   const supabase = createClient();
@@ -15,7 +9,7 @@ export async function POST(request) {
     return Response.json({ error: "Not authorized." }, { status: 401 });
   }
 
-  const { restaurant_id, subject, body, header_image_url, image_url, cta_text, cta_url } = await request.json();
+  const { restaurant_id, subject, body, header_image_url, image_url, cta_text, cta_url, scheduled_for } = await request.json();
   if (!restaurant_id || !subject || !body) {
     return Response.json({ error: "Missing details." }, { status: 400 });
   }
@@ -26,49 +20,9 @@ export async function POST(request) {
   }
 
   const admin = createAdminClient();
-  const { data: restaurant } = await admin.from("restaurants").select("name").eq("id", restaurant_id).single();
-  const { data: recipients } = await admin
-    .from("rewards_signups")
-    .select("email")
-    .eq("restaurant_id", restaurant_id)
-    .eq("marketing_opt_in", true);
+  const isFutureSchedule = scheduled_for && new Date(scheduled_for) > new Date();
 
-  const list = recipients || [];
-  let successCount = 0;
-  let failureCount = 0;
-
-  const html = `
-    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-      ${header_image_url ? `<img src="${header_image_url}" alt="" style="width:100%; border-radius: 8px;" />` : ""}
-      <div style="margin-top: 16px; color: #241F17; line-height: 1.5;">${emailSafeHtml(body)}</div>
-      ${image_url ? `<img src="${image_url}" alt="" style="width:100%; border-radius: 8px; margin-top: 16px;" />` : ""}
-      ${cta_text && cta_url ? `<div style="margin-top: 20px;"><a href="${cta_url}" style="background:#C98A2E; color:#fff; padding: 12px 20px; border-radius: 8px; text-decoration:none; display:inline-block; font-weight:bold;">${cta_text}</a></div>` : ""}
-    </div>
-  `;
-
-  for (const r of list) {
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: `${restaurant?.name || "Awea"} <onboarding@resend.dev>`,
-          to: [r.email],
-          subject,
-          html,
-        }),
-      });
-      if (res.ok) successCount++; else failureCount++;
-    } catch {
-      failureCount++;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 550));
-  }
-
-  await admin.from("campaigns").insert({
+  const baseRow = {
     restaurant_id,
     subject,
     body,
@@ -76,10 +30,29 @@ export async function POST(request) {
     image_url: image_url || null,
     cta_text: cta_text || null,
     cta_url: cta_url || null,
-    recipient_count: list.length,
-    success_count: successCount,
-    failure_count: failureCount,
+  };
+
+  if (isFutureSchedule) {
+    await admin.from("campaigns").insert({
+      ...baseRow,
+      scheduled_for,
+      status: "scheduled",
+      recipient_count: 0,
+      success_count: 0,
+      failure_count: 0,
+    });
+    return Response.json({ scheduled: true });
+  }
+
+  const result = await sendCampaignToRestaurant(admin, baseRow);
+
+  await admin.from("campaigns").insert({
+    ...baseRow,
+    status: "sent",
+    recipient_count: result.recipient_count,
+    success_count: result.success_count,
+    failure_count: result.failure_count,
   });
 
-  return Response.json({ recipient_count: list.length, success_count: successCount, failure_count: failureCount });
+  return Response.json(result);
 }
