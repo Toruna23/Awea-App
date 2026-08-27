@@ -100,8 +100,7 @@ export default function CampaignForm({ restaurantId }) {
         {headerImageUrl ? (
           <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={headerImageUrl} alt="" className="w-full h-32 object-cover rounded-lg" />
-            <button onClick={() => setHeaderImageUrl("")} className="absolute top-2 right-2 bg-black/60 text-white text-xs rounded-full px-2 py-1">Remove</button>
+            <img src={headerImageUrl} alt="" className="w-full h-32 object-cover rounded-lg" /><button onClick={() => setHeaderImageUrl("")} className="absolute top-2 right-2 bg-black/60 text-white text-xs rounded-full px-2 py-1">Remove</button>
           </div>
         ) : (
           <button onClick={() => headerFileRef.current?.click()} disabled={uploadingHeader}
@@ -168,4 +167,37 @@ export default function CampaignForm({ restaurantId }) {
           Send now
         </button>
         <button
-          onClick={() => set
+          onClick={() => setScheduleMode("later")}
+          className={`flex-1 rounded-lg border py-2 text-xs font-bold ${scheduleMode === "later" ? "bg-amber border-amber text-white" : "border-line text-muted"}`}
+        >
+          Schedule for later
+        </button>
+      </div>
+      {scheduleMode === "later" && (
+        <input
+          type="datetime-local"
+          value={scheduledFor}
+          onChange={(e) => setScheduledFor(e.target.value)}
+          className="w-full min-w-0 border border-line rounded-lg px-3 py-2 text-sm mb-3 box-border"
+        />
+      )}
+
+      {error && <div className="text-rust text-xs mb-2">{error}</div>}
+      {result?.scheduled && (
+        <div className="text-sage text-xs mb-2">Scheduled — it&apos;ll send automatically at the chosen time.</div>
+      )}
+      {result && !result.scheduled && (
+        <div className="text-sage text-xs mb-2">
+          Sent to {result.success_count} of {result.recipient_count} — {result.failure_count} blocked (test mode).
+        </div>
+      )}
+      <button
+        onClick={handleSend}
+        disabled={sending}
+        className="w-full bg-amber text-white rounded-lg py-2.5 text-sm font-bold disabled:opacity-50"
+      >
+        {sending ? "Working..." : scheduleMode === "later" ? "Schedule" : "Send now"}
+      </button>
+    </div>
+  );
+}
